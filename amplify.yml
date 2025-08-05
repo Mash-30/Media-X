@@ -5,18 +5,14 @@ frontend:
       commands:
         - echo "Installing dependencies..."
         - npm ci
-        - npm install -g @aws-amplify/cli
     build:
       commands:
         - echo "Building the app..."
-        - amplify init --yes
-        - amplify push --yes
         - npm run build
   artifacts:
-    baseDirectory: build
+    baseDirectory: web-build
     files:
       - '**/*'
   cache:
     paths:
-      - node_modules/**/*
-      - .amplify/**/* 
+      - node_modules/**/* 
