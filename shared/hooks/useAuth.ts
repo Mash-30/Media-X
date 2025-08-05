@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { apiClient } from '../services/api/client';
-import { API_ENDPOINTS } from '../utils/constants/api';
+import { API } from 'aws-amplify';
+import { Auth } from 'aws-amplify';
 
 export interface User {
   id: string;
@@ -44,33 +44,34 @@ export const useAuth = () => {
     error: null,
   });
 
-  // Check for existing token on mount
+  // Check for existing session on mount
   useEffect(() => {
-    const token = apiClient.getAuthToken();
-    if (token) {
-      // Validate token and get user data
-      validateToken(token);
-    } else {
-      setAuthState(prev => ({ ...prev, isLoading: false }));
-    }
+    checkAuthState();
   }, []);
 
-  const validateToken = async (token: string) => {
+  const checkAuthState = async () => {
     try {
-      const response = await apiClient.get<User>(API_ENDPOINTS.USERS.PROFILE, {
-        Authorization: `Bearer ${token}`,
-      });
+      const user = await Auth.currentAuthenticatedUser();
+      const session = await Auth.currentSession();
       
       setAuthState({
-        user: response.data,
-        token,
+        user: {
+          id: user.attributes.sub,
+          email: user.attributes.email,
+          username: user.username,
+          firstName: user.attributes.given_name,
+          lastName: user.attributes.family_name,
+          avatar: user.attributes.picture,
+          bio: user.attributes.bio,
+          createdAt: user.attributes.created_at,
+          updatedAt: user.attributes.updated_at,
+        },
+        token: session.getAccessToken().getJwtToken(),
         isAuthenticated: true,
         isLoading: false,
         error: null,
       });
     } catch (error) {
-      // Token is invalid, clear it
-      apiClient.clearAuthToken();
       setAuthState({
         user: null,
         token: null,
@@ -85,18 +86,22 @@ export const useAuth = () => {
     setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      const response = await apiClient.post<{ user: User; token: string }>(
-        API_ENDPOINTS.AUTH.LOGIN,
-        credentials
-      );
-
-      const { user, token } = response.data;
-      
-      apiClient.setAuthToken(token);
+      const user = await Auth.signIn(credentials.email, credentials.password);
+      const session = await Auth.currentSession();
       
       setAuthState({
-        user,
-        token,
+        user: {
+          id: user.attributes.sub,
+          email: user.attributes.email,
+          username: user.username,
+          firstName: user.attributes.given_name,
+          lastName: user.attributes.family_name,
+          avatar: user.attributes.picture,
+          bio: user.attributes.bio,
+          createdAt: user.attributes.created_at,
+          updatedAt: user.attributes.updated_at,
+        },
+        token: session.getAccessToken().getJwtToken(),
         isAuthenticated: true,
         isLoading: false,
         error: null,
@@ -118,22 +123,23 @@ export const useAuth = () => {
     setAuthState(prev => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      const response = await apiClient.post<{ user: User; token: string }>(
-        API_ENDPOINTS.AUTH.REGISTER,
-        credentials
-      );
+      const { user } = await Auth.signUp({
+        username: credentials.username,
+        password: credentials.password,
+        attributes: {
+          email: credentials.email,
+          given_name: credentials.firstName,
+          family_name: credentials.lastName,
+        },
+      });
 
-      const { user, token } = response.data;
-      
-      apiClient.setAuthToken(token);
-      
-      setAuthState({
-        user,
-        token,
-        isAuthenticated: true,
+      // For now, we'll consider registration successful
+      // In a real app, you might want to handle email verification
+      setAuthState(prev => ({
+        ...prev,
         isLoading: false,
         error: null,
-      });
+      }));
 
       return { success: true };
     } catch (error) {
@@ -149,14 +155,11 @@ export const useAuth = () => {
 
   const logout = useCallback(async () => {
     try {
-      await apiClient.post(API_ENDPOINTS.AUTH.LOGOUT);
+      await Auth.signOut();
     } catch (error) {
-      // Continue with logout even if API call fails
-      console.warn('Logout API call failed:', error);
+      console.warn('Logout failed:', error);
     }
 
-    apiClient.clearAuthToken();
-    
     setAuthState({
       user: null,
       token: null,
