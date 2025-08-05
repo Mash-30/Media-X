@@ -10,7 +10,7 @@ frontend:
         - echo "Building the app..."
         - npm run build
   artifacts:
-    baseDirectory: web-build
+    baseDirectory: dist
     files:
       - '**/*'
   cache:
