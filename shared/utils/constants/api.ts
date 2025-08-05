@@ -1,5 +1,5 @@
 export const API_CONFIG = {
-  BASE_URL: process.env.REACT_APP_API_URL || 'http://localhost:3000/api',
+  BASE_URL: process.env.EXPO_PUBLIC_API_URL || process.env.REACT_APP_API_URL || 'https://placeholder.appsync-api.us-east-1.amazonaws.com/graphql',
   TIMEOUT: 10000,
   RETRY_ATTEMPTS: 3,
 };
