@@ -1,0 +1,55 @@
+name: Deploy to AWS Amplify
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Install Amplify CLI
+      run: npm install -g @aws-amplify/cli
+      
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+        
+    - name: Initialize Amplify
+      run: |
+        amplify init --yes
+        amplify env checkout ${{ github.ref_name == 'main' && 'prod' || 'dev' }} --yes
+        
+    - name: Push to Amplify
+      run: amplify push --yes
+      
+    - name: Build app
+      run: npm run build
+      
+    - name: Deploy to Amplify
+      run: |
+        if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+          echo "Deploying to production..."
+          amplify publish --yes
+        else
+          echo "Deploying to development..."
+          amplify publish --yes
+        fi 
