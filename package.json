@@ -9,7 +9,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "build": "npx expo export:web",
+    "build": "npx expo export",
     "deploy:dev": "./scripts/deploy.sh",
     "deploy:prod": "./scripts/deploy.sh prod",
     "test": "npm run lint",
